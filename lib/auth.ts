@@ -10,7 +10,24 @@ export const getToken = () => {
 };
 
 export const logout = () => {
-  localStorage.removeItem("token");
+  try {
+    // Clear all storage
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    localStorage.removeItem("auth-token");
+    localStorage.clear();
+    
+    sessionStorage.clear();
+    
+    // Clear cookies if any
+    document.cookie.split(";").forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, "")
+        .replace(/=.*/, `=;expires=${new Date().toUTCString()};path=/`);
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+  }
 
   // ✅ IMPORTANT: replace (not push)
   window.location.replace("/login");

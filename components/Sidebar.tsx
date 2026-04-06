@@ -78,6 +78,10 @@ export default function Sidebar() {
     if (!profile) fetchProfile();
   };
 
+  const handleLogout = () => {
+    logout();
+  };
+
   const isActive = (path: string, exact: boolean) =>
     exact ? pathname === path : pathname === path || pathname?.startsWith(path + "/");
 
@@ -381,6 +385,16 @@ export default function Sidebar() {
           background: rgba(255, 255, 255, 0.07);
           color: #c0c4e4;
         }
+        .profile-btn-logout {
+          background: rgba(226,75,74,0.1);
+          color: #e87878;
+          border: 1px solid rgba(226,75,74,0.2);
+        }
+        .profile-btn-logout:hover {
+          background: rgba(226,75,74,0.18);
+          border-color: rgba(226,75,74,0.4);
+          color: #f09595;
+        }
 
         .profile-loading {
           padding: 40px 20px;
@@ -459,7 +473,7 @@ export default function Sidebar() {
               </div>
             </div>
           </div>
-          <button className="sb-logout" onClick={logout}>
+          <button className="sb-logout" onClick={handleLogout}>
             <span className="sb-item-icon">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -522,6 +536,9 @@ export default function Sidebar() {
                 <div className="profile-modal-footer">
                   <button className="profile-btn profile-btn-close" onClick={() => setProfileOpen(false)}>
                     Close
+                  </button>
+                  <button className="profile-btn profile-btn-logout" onClick={handleLogout}>
+                    Sign Out
                   </button>
                 </div>
               </>
