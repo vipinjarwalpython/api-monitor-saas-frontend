@@ -162,26 +162,49 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [apisLoading, setApisLoading] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const router = useRouter();
 
-  useEffect(() => {
-    const t = setTimeout(() => setHeaderVisible(true), 80);
-    
+  const fetchDashboardData = () => {
     // Fetch dashboard stats
-    api.get("/dashboard/")
+    return api.get("/dashboard/")
       .then((res) => setData(res.data))
-      .catch(() => console.log("Error"))
-      .finally(() => setLoading(false));
+      .catch(() => console.log("Error"));
+  };
 
+  const fetchApis = () => {
     // Fetch actual APIs for the table
-    setApisLoading(true);
-    api.get("/monitor/my-apis")
+    return api.get("/monitor/my-apis")
       .then((res) => {
         const apisData = Array.isArray(res.data) ? res.data : res.data?.apis ?? [];
         setApis(apisData);
       })
-      .catch(() => setApis([]))
-      .finally(() => setApisLoading(false));
+      .catch(() => setApis([]));
+  };
+
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    Promise.all([
+      api.get("/dashboard/").then((res) => setData(res.data)),
+      api.get("/monitor/my-apis").then((res) => {
+        const apisData = Array.isArray(res.data) ? res.data : res.data?.apis ?? [];
+        setApis(apisData);
+      })
+    ]).finally(() => setIsRefreshing(false));
+  };
+
+  useEffect(() => {
+    const t = setTimeout(() => setHeaderVisible(true), 80);
+    
+    setLoading(true);
+    setApisLoading(true);
+    Promise.all([
+      fetchDashboardData(),
+      fetchApis()
+    ]).finally(() => {
+      setLoading(false);
+      setApisLoading(false);
+    });
 
     return () => clearTimeout(t);
   }, []);
@@ -482,6 +505,12 @@ export default function Dashboard() {
         .trend-up { background: rgba(29,158,117,0.12); color: #1d9e75; }
         .trend-down { background: rgba(226,75,74,0.12); color: #e24b4a; }
 
+        /* Refresh animation */
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+
         /* Responsive */
         @media (max-width: 900px) {
           .dash-root { padding: 0 20px 48px; }
@@ -521,11 +550,11 @@ export default function Dashboard() {
                 </svg>
                 <div className="notif-dot" />
               </button>
-              <button className="btn-ghost">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <button className="btn-ghost" onClick={handleRefresh} disabled={isRefreshing} style={{ opacity: isRefreshing ? 0.6 : 1 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ animation: isRefreshing ? "spin 1s linear infinite" : "none" }}>
                   <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
                 </svg>
-                Refresh
+                {isRefreshing ? "Refreshing..." : "Refresh"}
               </button>
               <button className="btn-primary" onClick={() => router.push("/dashboard/add-api")}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
