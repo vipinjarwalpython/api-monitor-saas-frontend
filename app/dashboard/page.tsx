@@ -158,25 +158,33 @@ function Skeleton({ w = "100%", h = 20, r = 8 }: { w?: string | number; h?: numb
 // ─── Main Dashboard ───────────────────────────────────────────
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
+  const [apis, setApis] = useState<ApiItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [apisLoading, setApisLoading] = useState(false);
   const [headerVisible, setHeaderVisible] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const t = setTimeout(() => setHeaderVisible(true), 80);
+    
+    // Fetch dashboard stats
     api.get("/dashboard/")
       .then((res) => setData(res.data))
       .catch(() => console.log("Error"))
       .finally(() => setLoading(false));
+
+    // Fetch actual APIs for the table
+    setApisLoading(true);
+    api.get("/monitor/my-apis")
+      .then((res) => {
+        const apisData = Array.isArray(res.data) ? res.data : res.data?.apis ?? [];
+        setApis(apisData);
+      })
+      .catch(() => setApis([]))
+      .finally(() => setApisLoading(false));
+
     return () => clearTimeout(t);
   }, []);
-
-  const mockApis: ApiItem[] = data?.apis ?? [
-    { id: "1", name: "Auth Service", url: "https://api.example.com/auth", status: "up", uptime: 99.98, response_time: 124, last_checked: "2 min ago" },
-    { id: "2", name: "Payment Gateway", url: "https://pay.example.com/v2", status: "degraded", uptime: 97.2, response_time: 890, last_checked: "1 min ago" },
-    { id: "3", name: "User API", url: "https://api.example.com/users", status: "up", uptime: 100, response_time: 67, last_checked: "30 sec ago" },
-    { id: "4", name: "Notification Service", url: "https://notify.example.com", status: "down", uptime: 82.4, response_time: 0, last_checked: "5 min ago" },
-  ];
 
   return (
     <>
@@ -320,9 +328,12 @@ export default function Dashboard() {
 
         .table-header-row {
           display: grid;
-          grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr;
-          padding: 12px 22px;
+          grid-template-columns: 2.5fr 1fr 1.2fr 1fr 1.2fr;
+          padding: 14px 22px;
           border-bottom: 1px solid rgba(255,255,255,0.05);
+          background: rgba(255,255,255,0.015);
+          position: sticky;
+          top: 0;
         }
         .th {
           font-size: 10px; font-weight: 500;
@@ -333,7 +344,7 @@ export default function Dashboard() {
 
         .api-row {
           display: grid;
-          grid-template-columns: 2fr 1.2fr 1fr 1fr 1fr;
+          grid-template-columns: 2.5fr 1fr 1.2fr 1fr 1.2fr;
           padding: 16px 22px;
           align-items: center;
           border-bottom: 1px solid rgba(255,255,255,0.04);
@@ -476,10 +487,12 @@ export default function Dashboard() {
           .dash-root { padding: 0 20px 48px; }
           .stat-grid { grid-template-columns: 1fr; }
           .table-header-row, .api-row { grid-template-columns: 2fr 1fr 1fr; }
+          .table-header-row .th:nth-child(3),
           .table-header-row .th:nth-child(4),
-          .table-header-row .th:nth-child(5),
-          .api-row .td:nth-child(4),
-          .api-row .td:nth-child(5) { display: none; }
+          .api-row .td:nth-child(2),
+          .api-row > div:nth-child(2),
+          .api-row > div:nth-child(3),
+          .api-row > div:nth-child(4) { display: none; }
         }
       `}</style>
 
@@ -582,7 +595,7 @@ export default function Dashboard() {
               </button>
             </div>
           ) : !loading && (
-            <ApiTable apis={mockApis} />
+            <ApiTable apis={apis} apisLoading={apisLoading} onRowClick={(id) => router.push(`/dashboard/api/${id}`)} />
           )}
 
       </div>
@@ -591,9 +604,37 @@ export default function Dashboard() {
 }
 
 // ─── API Table Component ──────────────────────────────────────
-function ApiTable({ apis }: { apis: ApiItem[] }) {
+function ApiTable({ apis, apisLoading, onRowClick }: { 
+  apis: any[]; 
+  apisLoading: boolean;
+  onRowClick: (id: string | number) => void;
+}) {
   const [visible, setVisible] = useState(false);
   useEffect(() => { const t = setTimeout(() => setVisible(true), 350); return () => clearTimeout(t); }, []);
+
+  const getStatusFromCode = (status?: string): "up" | "down" | "degraded" => {
+    if (!status) return "down";
+    const s = status.toUpperCase();
+    if (s === "UP") return "up";
+    if (s === "DOWN") return "down";
+    return "degraded";
+  };
+
+  const formatCheckedTime = (timestamp?: string): string => {
+    if (!timestamp) return "—";
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+      
+      if (seconds < 60) return `${seconds}s ago`;
+      if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+      if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+      return date.toLocaleDateString();
+    } catch {
+      return timestamp;
+    }
+  };
 
   return (
     <>
@@ -609,37 +650,73 @@ function ApiTable({ apis }: { apis: ApiItem[] }) {
         <div className="table-header-row">
           <span className="th">Endpoint</span>
           <span className="th">Status</span>
-          <span className="th">Uptime</span>
           <span className="th">Response</span>
+          <span className="th">Uptime</span>
           <span className="th">Checked</span>
         </div>
-        {apis.map((api) => {
-          const rtColor = api.response_time === 0 ? "#e24b4a" : api.response_time > 500 ? "#ef9f27" : "#1d9e75";
-          const uptimeColor = api.uptime < 90 ? "#e24b4a" : api.uptime < 98 ? "#ef9f27" : "#1d9e75";
-          return (
-            <div key={api.id} className="api-row">
+
+        {apisLoading ? (
+          [1, 2, 3, 4].map((i) => (
+            <div key={i} className="api-row" style={{ opacity: 0.6, cursor: "default" }}>
               <div>
-                <div className="api-name">{api.name}</div>
-                <div className="api-url">{api.url}</div>
+                <div style={{ height: 16, background: "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 6, marginBottom: 6, width: "70%" }} />
+                <div style={{ height: 12, background: "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 4, width: "80%", opacity: 0.6 }} />
               </div>
-              <div><StatusBadge status={api.status} /></div>
-              <div>
-                <div className="uptime-bar-wrap">
-                  <div className="uptime-bar-bg">
-                    <div className="uptime-bar-fill" style={{ width: `${api.uptime}%`, background: uptimeColor }} />
-                  </div>
-                  <span style={{ fontSize: 12, color: uptimeColor, fontWeight: 500, minWidth: 42 }}>
-                    {api.uptime}%
+              <div style={{ height: 22, background: "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 100, width: 60 }} />
+              <div style={{ height: 16, background: "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 4, width: "50%" }} />
+              <div style={{ height: 16, background: "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 4, width: "60%" }} />
+              <div style={{ height: 16, background: "linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.07) 50%, rgba(255,255,255,0.04) 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.5s infinite", borderRadius: 4, width: "55%" }} />
+            </div>
+          ))
+        ) : apis.length === 0 ? (
+          <div style={{ padding: "60px 24px", textAlign: "center" }}>
+            <div style={{ color: "#464e6a", fontSize: 13 }}>No APIs added yet</div>
+            <div style={{ color: "#2e3248", fontSize: 12, marginTop: 4 }}>Start by adding your first API to monitor</div>
+          </div>
+        ) : (
+          apis.map((api: any) => {
+            const status = getStatusFromCode(api.status);
+            const rtMs = typeof api.last_response_time === "number" ? api.last_response_time : 0;
+            const rtColor = !rtMs || rtMs === 0 ? "#e24b4a" : rtMs > 500 ? "#ef9f27" : "#1d9e75";
+            
+            return (
+              <div 
+                key={api.id} 
+                className="api-row" 
+                onClick={() => onRowClick(api.id)}
+              >
+                <div>
+                  <div className="api-name">{api.name || "Untitled API"}</div>
+                  <div className="api-url">{api.url}</div>
+                </div>
+                <div>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", gap: 5,
+                    padding: "3px 10px", borderRadius: 100,
+                    background: status === "up" ? "rgba(29,158,117,0.12)" : status === "down" ? "rgba(226,75,74,0.12)" : "rgba(239,159,39,0.12)",
+                    border: status === "up" ? "1px solid rgba(29,158,117,0.28)" : status === "down" ? "1px solid rgba(226,75,74,0.28)" : "1px solid rgba(239,159,39,0.28)",
+                    fontSize: 11, fontWeight: 500,
+                    color: status === "up" ? "#1d9e75" : status === "down" ? "#e24b4a" : "#ef9f27",
+                  }}>
+                    <span style={{
+                      width: 6, height: 6, borderRadius: "50%",
+                      background: status === "up" ? "#1d9e75" : status === "down" ? "#e24b4a" : "#ef9f27",
+                      boxShadow: status === "up" ? "0 0 6px #1d9e75" : "none",
+                    }} />
+                    {api.status ? api.status.toUpperCase() : "—"}
                   </span>
                 </div>
+                <div className="td" style={{ color: rtColor, fontWeight: 500 }}>
+                  {!rtMs || rtMs === 0 ? "—" : `${rtMs.toFixed(0)} ms`}
+                </div>
+                <div className="td" style={{ color: "#4f6ef7", fontWeight: 500 }}>
+                  {typeof api.uptime === "number" ? `${api.uptime.toFixed(0)}%` : "—"}
+                </div>
+                <div className="td">{formatCheckedTime(api.updated_at || api.last_checked)}</div>
               </div>
-              <div className="td" style={{ color: rtColor, fontWeight: 500 }}>
-                {api.response_time === 0 ? "—" : `${api.response_time} ms`}
-              </div>
-              <div className="td">{api.last_checked}</div>
-            </div>
-          );
-        })}
+            );
+          })
+        )}
       </div>
     </>
   );
