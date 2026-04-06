@@ -186,12 +186,12 @@ export default function Dashboard() {
         * { box-sizing: border-box; margin: 0; padding: 0; }
 
         .dash-root {
-          min-height: 100vh;
           background: #0a0c12;
           font-family: 'DM Sans', sans-serif;
           color: #eef0ff;
           position: relative;
           overflow-x: hidden;
+          padding: 0 36px 48px;
         }
 
         /* Background orbs */
@@ -212,116 +212,6 @@ export default function Dashboard() {
           background-image: linear-gradient(rgba(255,255,255,0.015) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.015) 1px, transparent 1px);
           background-size: 48px 48px;
           pointer-events: none;
-        }
-
-        /* Sidebar */
-        .sidebar {
-          position: fixed;
-          top: 0; left: 0; bottom: 0;
-          width: 220px;
-          background: rgba(10,12,18,0.92);
-          border-right: 1px solid rgba(255,255,255,0.06);
-          backdrop-filter: blur(20px);
-          display: flex; flex-direction: column;
-          padding: 28px 0;
-          z-index: 100;
-        }
-        .sidebar-logo {
-          display: flex; align-items: center; gap: 10px;
-          padding: 0 22px 28px;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
-          margin-bottom: 16px;
-        }
-        .logo-icon {
-          width: 32px; height: 32px;
-          background: linear-gradient(135deg, #4f6ef7, #7b6af7);
-          border-radius: 9px;
-          display: flex; align-items: center; justify-content: center;
-          box-shadow: 0 4px 14px rgba(79,110,247,0.4);
-          flex-shrink: 0;
-        }
-        .logo-name {
-          font-family: 'Playfair Display', serif;
-          font-size: 16px; font-weight: 600;
-          color: #eef0ff;
-          letter-spacing: -0.01em;
-        }
-        .logo-tag {
-          font-size: 9px; font-weight: 500;
-          color: #4f6ef7;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          display: block;
-          margin-top: -2px;
-        }
-
-        .nav-section-label {
-          font-size: 10px; font-weight: 500;
-          color: #363a52;
-          text-transform: uppercase;
-          letter-spacing: 0.1em;
-          padding: 0 22px;
-          margin: 16px 0 6px;
-        }
-
-        .nav-item {
-          display: flex; align-items: center; gap: 10px;
-          padding: 9px 22px;
-          font-size: 13px; font-weight: 400;
-          color: #555e80;
-          cursor: pointer;
-          transition: color 0.2s, background 0.2s;
-          border-radius: 0;
-          position: relative;
-          text-decoration: none;
-        }
-        .nav-item:hover { color: #c0c4e4; background: rgba(255,255,255,0.03); }
-        .nav-item.active {
-          color: #eef0ff;
-          background: rgba(79,110,247,0.1);
-        }
-        .nav-item.active::before {
-          content: '';
-          position: absolute;
-          left: 0; top: 6px; bottom: 6px;
-          width: 2px;
-          background: linear-gradient(to bottom, #4f6ef7, #7b6af7);
-          border-radius: 0 2px 2px 0;
-        }
-
-        .sidebar-footer {
-          margin-top: auto;
-          padding: 16px 22px 0;
-          border-top: 1px solid rgba(255,255,255,0.05);
-        }
-        .user-pill {
-          display: flex; align-items: center; gap: 10px;
-          padding: 10px 12px;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.06);
-          border-radius: 12px;
-          cursor: pointer;
-          transition: background 0.2s;
-        }
-        .user-pill:hover { background: rgba(255,255,255,0.06); }
-        .user-avatar {
-          width: 30px; height: 30px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #4f6ef7, #7b6af7);
-          display: flex; align-items: center; justify-content: center;
-          font-size: 12px; font-weight: 500; color: #fff;
-          flex-shrink: 0;
-        }
-        .user-name { font-size: 12px; font-weight: 500; color: #c0c4e4; }
-        .user-role { font-size: 10px; font-weight: 300; color: #464e6a; }
-
-        /* Main content */
-        .main {
-          margin-left: 220px;
-          min-height: 100vh;
-          padding: 0 36px 48px;
-          position: relative;
-          z-index: 1;
         }
 
         /* Top bar */
@@ -583,8 +473,7 @@ export default function Dashboard() {
 
         /* Responsive */
         @media (max-width: 900px) {
-          .sidebar { display: none; }
-          .main { margin-left: 0; padding: 0 20px 48px; }
+          .dash-root { padding: 0 20px 48px; }
           .stat-grid { grid-template-columns: 1fr; }
           .table-header-row, .api-row { grid-template-columns: 2fr 1fr 1fr; }
           .table-header-row .th:nth-child(4),
@@ -599,73 +488,8 @@ export default function Dashboard() {
         <div className="bg-orb bg-orb-1" />
         <div className="bg-orb bg-orb-2" />
 
-        {/* ── SIDEBAR ── */}
-        <aside className="sidebar">
-          <div className="sidebar-logo">
-            <div className="logo-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-              </svg>
-            </div>
-            <div>
-              <div className="logo-name">API Monitor</div>
-              <span className="logo-tag">Pro</span>
-            </div>
-          </div>
-
-          <span className="nav-section-label">Overview</span>
-          <a className="nav-item active" onClick={() => router.push("/dashboard")}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-            Dashboard
-          </a>
-          <a className="nav-item" onClick={() => router.push("/dashboard/apis")}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-            Monitor
-          </a>
-
-          <span className="nav-section-label">Manage</span>
-          <a className="nav-item" onClick={() => router.push("/dashboard/apis")}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
-            Endpoints
-          </a>
-          <a className="nav-item" onClick={() => {}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            Alerts
-          </a>
-          <a className="nav-item" onClick={() => {}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-            Analytics
-          </a>
-
-          <span className="nav-section-label">Account</span>
-          <a className="nav-item" onClick={() => {}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-            Profile
-          </a>
-          <a className="nav-item" onClick={() => {}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Settings
-          </a>
-
-          <div className="sidebar-footer">
-            <div className="user-pill" onClick={logout} title="Logout">
-              <div className="user-avatar">JD</div>
-              <div>
-                <div className="user-name">John Dev</div>
-                <div className="user-role">Admin</div>
-              </div>
-              <svg style={{ marginLeft: "auto", color: "#363a52" }} width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </div>
-          </div>
-        </aside>
-
-        {/* ── MAIN ── */}
-        <main className="main">
-
-          {/* Top bar */}
-          <div className={`topbar ${headerVisible ? "visible" : ""}`}>
+        {/* Top bar */}
+        <div className={`topbar ${headerVisible ? "visible" : ""}`}>
             <div className="topbar-left">
               <div className="page-eyebrow">Overview</div>
               <h1 className="page-title">Dashboard</h1>
@@ -761,7 +585,6 @@ export default function Dashboard() {
             <ApiTable apis={mockApis} />
           )}
 
-        </main>
       </div>
     </>
   );
