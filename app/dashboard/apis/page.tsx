@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import api from "@/lib/axios";
+import { monitorAPI } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 interface ApiItem {
@@ -43,10 +43,10 @@ export default function ApiList() {
 
   const fetchApis = async () => {
     try {
-      const res = await api.get("/monitor/my-apis");
-      setApis(res.data);
+      const data = await monitorAPI.getMyAPIs();
+      setApis(data || []);
     } catch (err) {
-      console.log(err);
+      console.log("Error fetching APIs:", err);
     } finally {
       setLoading(false);
     }
@@ -57,9 +57,14 @@ export default function ApiList() {
   const handleDelete = async (id: number) => {
     setDeleteId(id);
     setTimeout(async () => {
-      await api.delete(`/monitor/delete-api/${id}`);
-      setDeleteId(null);
-      fetchApis();
+      try {
+        await monitorAPI.deleteMonitor(id);
+        setDeleteId(null);
+        fetchApis();
+      } catch (err) {
+        console.error("Delete error:", err);
+        setDeleteId(null);
+      }
     }, 300);
   };
 
@@ -101,7 +106,7 @@ export default function ApiList() {
     if (!iv || iv < 10) { setEditError("Interval must be at least 10 seconds."); return; }
     try {
       setEditLoading(true);
-      await api.put(`/monitor/${editItem!.id}`, {
+      await monitorAPI.updateMonitor(editItem!.id, {
         url: editUrl,
         check_interval: iv,
       });
@@ -111,7 +116,8 @@ export default function ApiList() {
         fetchApis();
       }, 1000);
     } catch (err: any) {
-      setEditError(err?.response?.data?.detail || "Failed to save changes.");
+      const errorMsg = err?.response?.data?.details || err?.response?.data?.detail || "Failed to save changes.";
+      setEditError(errorMsg);
     } finally {
       setEditLoading(false);
     }
@@ -451,7 +457,7 @@ export default function ApiList() {
                     </div>
 
                     <div className="resp-time">
-                      {item.last_response_time != null ? `${item.last_response_time} ms` : "—"}
+                      {item.response_time != null ? `${item.response_time} ms` : "—"}
                     </div>
 
                     <div className="interval-val">

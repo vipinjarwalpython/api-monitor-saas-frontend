@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import api from "@/lib/axios";
+import { userAPI, monitorAPI } from "@/lib/api";
 import { logout } from "@/lib/auth";
 import { useRouter } from "next/navigation";
 
@@ -167,29 +167,50 @@ export default function Dashboard() {
 
   const fetchDashboardData = () => {
     // Fetch dashboard stats
-    return api.get("/dashboard/")
-      .then((res) => setData(res.data))
-      .catch(() => console.log("Error"));
+    return userAPI.getUserStats()
+      .then((res) => {
+        console.log("Stats response:", res);
+        setData({
+          total_apis: res.total_monitors || 0,
+          uptime_percent: res.average_uptime || 0,
+          avg_response_time: 0, // Not provided in stats endpoint
+        });
+      })
+      .catch((err) => {
+        console.error("Error fetching stats:", err);
+        setData({ total_apis: 0, uptime_percent: 0, avg_response_time: 0 });
+      });
   };
 
   const fetchApis = () => {
     // Fetch actual APIs for the table
-    return api.get("/monitor/my-apis")
+    return monitorAPI.getMyAPIs()
       .then((res) => {
-        const apisData = Array.isArray(res.data) ? res.data : res.data?.apis ?? [];
-        setApis(apisData);
+        console.log("My APIs response:", res);
+        setApis(Array.isArray(res) ? res : []);
       })
-      .catch(() => setApis([]));
+      .catch((err) => {
+        console.error("Error fetching APIs:", err);
+        setApis([]);
+      });
   };
 
   const handleRefresh = () => {
     setIsRefreshing(true);
     Promise.all([
-      api.get("/dashboard/").then((res) => setData(res.data)),
-      api.get("/monitor/my-apis").then((res) => {
-        const apisData = Array.isArray(res.data) ? res.data : res.data?.apis ?? [];
-        setApis(apisData);
-      })
+      userAPI.getUserStats()
+        .then((res) => setData({
+          total_apis: res.total_monitors,
+          uptime_percent: res.average_uptime,
+          avg_response_time: 0,
+        }))
+        .catch((err) => console.log("Error:", err)),
+      monitorAPI.getMyAPIs()
+        .then((res) => setApis(res || []))
+        .catch((err) => {
+          console.log("Error:", err);
+          setApis([]);
+        })
     ]).finally(() => setIsRefreshing(false));
   };
 
@@ -705,8 +726,10 @@ function ApiTable({ apis, apisLoading, onRowClick }: {
         ) : (
           apis.map((api: any) => {
             const status = getStatusFromCode(api.status);
-            const rtMs = typeof api.last_response_time === "number" ? api.last_response_time : 0;
-            const rtColor = !rtMs || rtMs === 0 ? "#e24b4a" : rtMs > 500 ? "#ef9f27" : "#1d9e75";
+            // Handle response_time which comes in seconds from API
+            const rtValue = api.response_time;
+            const rtMs = typeof rtValue === "number" && rtValue > 0 ? Math.round(rtValue * 1000) : null;
+            const rtColor = !rtMs ? "#e24b4a" : rtMs > 500 ? "#ef9f27" : "#1d9e75";
             
             return (
               <div 
@@ -716,7 +739,7 @@ function ApiTable({ apis, apisLoading, onRowClick }: {
               >
                 <div>
                   <div className="api-name">{api.name || "Untitled API"}</div>
-                  <div className="api-url">{api.url}</div>
+                  <div className="api-url">{api.url || "—"}</div>
                 </div>
                 <div>
                   <span style={{
@@ -736,12 +759,10 @@ function ApiTable({ apis, apisLoading, onRowClick }: {
                   </span>
                 </div>
                 <div className="td" style={{ color: rtColor, fontWeight: 500 }}>
-                  {!rtMs || rtMs === 0 ? "—" : `${rtMs.toFixed(0)} ms`}
+                  {rtMs ? `${rtMs} ms` : "—"}
                 </div>
-                <div className="td" style={{ color: "#4f6ef7", fontWeight: 500 }}>
-                  {typeof api.uptime === "number" ? `${api.uptime.toFixed(0)}%` : "—"}
-                </div>
-                <div className="td">{formatCheckedTime(api.updated_at || api.last_checked)}</div>
+                <div className="td" style={{ color: "#4f6ef7", fontWeight: 500 }}>—</div>
+                <div className="td">{formatCheckedTime(api.last_checked_at || "")}</div>
               </div>
             );
           })

@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import api from "@/lib/axios";
-import { setToken } from "@/lib/auth";
+import { authAPI } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [focused, setFocused] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -21,11 +21,19 @@ export default function Login() {
   const handleLogin = async () => {
     try {
       setLoading(true);
-      const res = await api.post("/auth/login", { email, password });
-      setToken(res.data.access_token);
+      setError("");
+      
+      if (!email || !password) {
+        setError("Please enter email and password");
+        return;
+      }
+
+      await authAPI.login(email, password);
       router.push("/dashboard");
-    } catch (err) {
-      alert("Invalid email or password");
+    } catch (err: any) {
+      const errorMsg = err?.message || err?.response?.data?.details || "Invalid email or password";
+      setError(errorMsg);
+      console.error("Login error:", err);
     } finally {
       setLoading(false);
     }
@@ -345,6 +353,18 @@ export default function Login() {
         }
         .forgot-link:hover { color: #7b9cf5; }
 
+        .error-message {
+          background: rgba(239, 68, 68, 0.1);
+          border: 1px solid rgba(239, 68, 68, 0.3);
+          border-radius: 8px;
+          padding: 12px 16px;
+          margin-bottom: 20px;
+          color: #ef4444;
+          font-size: 13px;
+          font-weight: 400;
+          line-height: 1.5;
+        }
+
         .login-btn {
           width: 100%;
           padding: 14px;
@@ -651,6 +671,8 @@ export default function Login() {
             <div className="forgot-row">
               <button className="forgot-link" type="button">Forgot password?</button>
             </div>
+
+            {error && <div className="error-message">{error}</div>}
 
             <button
               className="login-btn"

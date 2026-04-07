@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import api from "@/lib/axios";
+import { authAPI } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 export default function Register() {
@@ -53,11 +53,13 @@ export default function Register() {
     }
     try {
       setLoading(true);
-      await api.post("/auth/register", { email, password });
+      const name = email.split('@')[0]; // Use email prefix as default name
+      await authAPI.register({ email, password, name });
       setSuccess("Account created successfully! Redirecting…");
       setTimeout(() => router.push("/login"), 1500);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Registration failed. Try again.");
+      const errorMsg = err?.response?.data?.details || err?.response?.data?.detail || "Registration failed. Try again.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }

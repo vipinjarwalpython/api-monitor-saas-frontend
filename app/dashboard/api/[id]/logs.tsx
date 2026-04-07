@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import api from "@/lib/axios";
+import { analyticsAPI } from "@/lib/api";
 import { useParams } from "next/navigation";
 
 interface Log {
@@ -35,8 +35,10 @@ export default function Logs() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get(`/monitor/logs/${id}`)
-      .then((res) => setLogs(res.data))
+    const numId = parseInt(id as string, 10);
+    analyticsAPI.getMonitorLogs(numId, { limit: 1000 })
+      .then((res) => setLogs(res))
+      .catch((err) => console.error("Error fetching logs:", err))
       .finally(() => setLoading(false));
   }, [id]);
 
@@ -201,8 +203,9 @@ export default function Logs() {
             <>
               {logs.map((log, index) => {
                 const s = statusStyle(log.status_code);
-                // Scale bar width: clamp response time 0–2000ms → 4px–80px
-                const barWidth = Math.min(80, Math.max(4, (log.response_time / 2000) * 80));
+                // Convert response_time from seconds to ms and scale bar width: 0–2000ms → 4px–80px
+                const responseTimeMs = log.response_time * 1000;
+                const barWidth = Math.min(80, Math.max(4, (responseTimeMs / 2000) * 80));
                 return (
                   <div className="log-row" key={index}>
                     <div>
@@ -215,9 +218,9 @@ export default function Logs() {
                     <div className="resp-val">
                       <span className="resp-bar" style={{ width: barWidth }} />
                       {log.response_time != null
-                        ? `${typeof log.response_time === "number" && log.response_time < 1
-                            ? log.response_time.toFixed(4)
-                            : log.response_time.toFixed(2)} ms`
+                        ? `${responseTimeMs < 1000 
+                            ? responseTimeMs.toFixed(2)
+                            : (responseTimeMs / 1000).toFixed(2)} ${responseTimeMs < 1000 ? 'ms' : 's'}`
                         : "—"}
                     </div>
 

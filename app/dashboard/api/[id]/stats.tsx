@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import api from "@/lib/axios";
+import { analyticsAPI } from "@/lib/api";
 import { useParams } from "next/navigation";
 
 export default function Stats() {
@@ -9,9 +9,15 @@ export default function Stats() {
   const [stats, setStats] = useState<any>(null);
 
   useEffect(() => {
-    api.get(`/monitor/stats/${id}`).then((res) => {
-      setStats(res.data);
-    });
+    const numId = parseInt(id as string, 10);
+    analyticsAPI.getMonitorStats(numId)
+      .then((res) => {
+        console.log("Monitor stats:", res);
+        setStats(res);
+      })
+      .catch((err) => {
+        console.error("Error fetching stats:", err);
+      });
   }, [id]);
 
   return (
@@ -155,7 +161,7 @@ export default function Stats() {
               </div>
               <div className="stat-label">Total Checks</div>
               <div className="stat-value" style={{ color: "#d0d8f8" }}>
-                {stats.total_checks ?? 0}
+                {stats?.total_checks ?? 0}
               </div>
               <div className="stat-bar-wrap">
                 <div className="stat-bar" style={{ width: "100%", background: "linear-gradient(90deg,#4f6ef7,rgba(79,110,247,0.2))" }} />
@@ -173,20 +179,20 @@ export default function Stats() {
               </div>
               <div className="stat-label">Successful</div>
               <div className="stat-value" style={{ color: "#3dcaa0" }}>
-                {stats.success_count ?? 0}
+                {stats?.success_checks ?? 0}
               </div>
               <div className="stat-bar-wrap">
                 <div
                   className="stat-bar"
                   style={{
-                    width: stats.total_checks > 0 ? `${(stats.success_count / stats.total_checks) * 100}%` : "0%",
+                    width: (stats?.total_checks ?? 0) > 0 ? `${((stats?.success_checks ?? 0) / (stats?.total_checks ?? 1)) * 100}%` : "0%",
                     background: "linear-gradient(90deg,#1d9e75,rgba(29,158,117,0.2))"
                   }}
                 />
               </div>
               <div className="stat-footer">
-                {stats.total_checks > 0
-                  ? `${((stats.success_count / stats.total_checks) * 100).toFixed(1)}% success rate`
+                {(stats?.total_checks ?? 0) > 0
+                  ? `${(((stats?.success_checks ?? 0) / (stats?.total_checks ?? 1)) * 100).toFixed(1)}% success rate`
                   : "No checks yet"}
               </div>
             </div>
@@ -201,33 +207,33 @@ export default function Stats() {
                 </svg>
               </div>
               <div className="stat-label">Failures</div>
-              <div className="stat-value" style={{ color: stats.failure_count > 0 ? "#f09595" : "#3dcaa0" }}>
-                {stats.failure_count ?? 0}
+              <div className="stat-value" style={{ color: (stats?.failure_checks ?? 0) > 0 ? "#f09595" : "#3dcaa0" }}>
+                {stats?.failure_checks ?? 0}
               </div>
               <div className="stat-bar-wrap">
                 <div
                   className="stat-bar"
                   style={{
-                    width: stats.total_checks > 0 ? `${(stats.failure_count / stats.total_checks) * 100}%` : "0%",
+                    width: (stats?.total_checks ?? 0) > 0 ? `${((stats?.failure_checks ?? 0) / (stats?.total_checks ?? 1)) * 100}%` : "0%",
                     background: "linear-gradient(90deg,#e24b4a,rgba(226,75,74,0.2))"
                   }}
                 />
               </div>
               <div className="stat-footer">
-                {stats.failure_count === 0 ? "No failures recorded 🎉" : `${stats.failure_count} failed check${stats.failure_count !== 1 ? "s" : ""}`}
+                {(stats?.failure_checks ?? 0) === 0 ? "No failures recorded 🎉" : `${stats?.failure_checks} failed check${(stats?.failure_checks ?? 0) !== 1 ? "s" : ""}`}
               </div>
             </div>
           </div>
 
           {/* Uptime summary */}
-          {stats.total_checks > 0 && (
+          {(stats?.total_checks ?? 0) > 0 && (
             <div className="uptime-section">
               <div>
                 <div className="uptime-label">Overall Uptime</div>
                 <div className="uptime-value">
-                  {((stats.success_count / stats.total_checks) * 100).toFixed(2)}%
+                  {(stats?.uptime_percent ?? 0).toFixed(2)}%
                 </div>
-                <div className="uptime-sub">Based on {stats.total_checks} total checks</div>
+                <div className="uptime-sub">Based on {stats?.total_checks} total checks</div>
               </div>
               <svg width="52" height="52" viewBox="0 0 52 52">
                 <circle cx="26" cy="26" r="22" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="4"/>
@@ -238,7 +244,7 @@ export default function Stats() {
                   strokeWidth="4"
                   strokeLinecap="round"
                   strokeDasharray={`${2 * Math.PI * 22}`}
-                  strokeDashoffset={`${2 * Math.PI * 22 * (1 - stats.success_count / stats.total_checks)}`}
+                  strokeDashoffset={`${2 * Math.PI * 22 * (1 - ((stats?.uptime_percent ?? 0) / 100))}`}
                   transform="rotate(-90 26 26)"
                   style={{ transition: "stroke-dashoffset 1s ease" }}
                 />

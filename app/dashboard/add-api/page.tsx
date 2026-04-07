@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import api from "@/lib/axios";
+import { monitorAPI } from "@/lib/api";
 import { useRouter } from "next/navigation";
 
 const INTERVAL_PRESETS = [
@@ -54,11 +54,18 @@ export default function AddApi() {
     if (!iv || iv < 10) { setError("Check interval must be at least 10 seconds."); return; }
     try {
       setLoading(true);
-      await api.post("/monitor/add-api", { name, url, check_interval: iv, method });
+      await monitorAPI.createMonitor({ 
+        name, 
+        url, 
+        check_interval: iv, 
+        method,
+        expected_status_codes: [200, 301]
+      });
       setSuccess("API added and monitoring started!");
       setTimeout(() => router.push("/dashboard"), 1500);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "Failed to add API. Please try again.");
+      const errorMsg = err?.response?.data?.details || err?.response?.data?.detail || "Failed to add API. Please try again.";
+      setError(errorMsg);
     } finally {
       setLoading(false);
     }
