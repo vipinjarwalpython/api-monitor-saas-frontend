@@ -1,106 +1,88 @@
-import axios from "axios";
-import { shouldRefreshToken, refreshToken, logout } from "./auth";
+import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import { getApiBaseUrl, getToken, logout, refreshToken } from "./auth";
 
-// ✅ Create instance
+type RetryableRequest = InternalAxiosRequestConfig & { _retry?: boolean };
+
 const api = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: getApiBaseUrl(),
   headers: {
-    "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
 let isRefreshing = false;
-let failedQueue: Array<(token: string | null) => void> = [];
+let refreshQueue: Array<(token: string | null) => void> = [];
 
-const processQueue = (token: string | null) => {
-  failedQueue.forEach((callback) => callback(token));
-  failedQueue = [];
-};
+function flushQueue(token: string | null) {
+  refreshQueue.forEach((callback) => callback(token));
+  refreshQueue = [];
+}
 
-// ✅ Request interceptor (attach token & check expiry)
-api.interceptors.request.use(
-  async (config) => {
-    if (typeof window !== "undefined") {
-      // Check if token needs refresh
-      if (shouldRefreshToken()) {
-        if (!isRefreshing) {
-          isRefreshing = true;
-          try {
-            await refreshToken();
-          } catch (error) {
-            console.error("Token refresh failed in interceptor:", error);
-            logout();
-            return Promise.reject(error);
-          } finally {
-            isRefreshing = false;
-            processQueue(null);
-          }
-        }
-      }
+function attachToken(config: InternalAxiosRequestConfig, token: string) {
+  config.headers = config.headers || {};
+  config.headers.Authorization = `Bearer ${token}`;
+}
 
-      const token = localStorage.getItem("token");
+api.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) {
+    attachToken(config, token);
+  }
 
-      if (token) {
-        config.headers = config.headers || {};
-        config.headers.Authorization = `Bearer ${token}`;
-      }
-    }
+  return config;
+});
 
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// ✅ Response interceptor (handle errors globally)
 api.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const status = error.response?.status;
+    const originalRequest = error.config as RetryableRequest | undefined;
 
-    // Handle unauthorized (token expired or invalid)
-    if (error?.response?.status === 401) {
-      // Prevent infinite refresh loops
-      if (originalRequest._retry) {
+    if (!originalRequest || status !== 401 || originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    if (originalRequest.url?.includes("/api/v1/auth/login")) {
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        refreshQueue.push((token) => {
+          if (!token) {
+            reject(error);
+            return;
+          }
+
+          attachToken(originalRequest, token);
+          resolve(api(originalRequest));
+        });
+      });
+    }
+
+    isRefreshing = true;
+
+    try {
+      const token = await refreshToken();
+
+      flushQueue(token);
+
+      if (!token) {
         logout();
         return Promise.reject(error);
       }
 
-      originalRequest._retry = true;
-
-      if (!isRefreshing) {
-        isRefreshing = true;
-        try {
-          const token = await refreshToken();
-          processQueue(token);
-          
-          if (token) {
-            originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
-          }
-        } catch (refreshError) {
-          processQueue(null);
-          logout();
-          return Promise.reject(refreshError);
-        } finally {
-          isRefreshing = false;
-        }
-      } else {
-        // Queue request while refreshing
-        return new Promise((resolve, reject) => {
-          failedQueue.push((token) => {
-            if (token) {
-              originalRequest.headers.Authorization = `Bearer ${token}`;
-              resolve(api(originalRequest));
-            } else {
-              reject(error);
-            }
-          });
-        });
-      }
+      attachToken(originalRequest, token);
+      return api(originalRequest);
+    } catch (refreshError) {
+      flushQueue(null);
+      logout();
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
     }
-
-    console.log("API ERROR:", error?.response?.data || error.message);
-    return Promise.reject(error);
   }
 );
 

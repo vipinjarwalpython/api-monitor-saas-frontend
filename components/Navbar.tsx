@@ -1,144 +1,89 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { logout } from "@/lib/auth";
 
-const PAGE_META: Record<string, { title: string; sub: string }> = {
-  "/dashboard":          { title: "Dashboard",  sub: "Overview of all your monitored APIs" },
-  "/dashboard/apis":     { title: "My APIs",    sub: "Manage and view your API monitors" },
-  "/dashboard/add-api":  { title: "Add API",    sub: "Connect a new endpoint to monitor" },
-};
-
-function getPageMeta(pathname: string | null) {
-  if (!pathname) return { title: "Dashboard", sub: "" };
-  // exact match first
-  if (PAGE_META[pathname]) return PAGE_META[pathname];
-  // prefix match for nested routes e.g. /dashboard/api/5
-  for (const key of Object.keys(PAGE_META)) {
-    if (key !== "/dashboard" && pathname.startsWith(key)) return PAGE_META[key];
-  }
-  return { title: "Dashboard", sub: "" };
-}
+const PAGE_META: Array<{ match: RegExp; title: string; subtitle: string }> = [
+  {
+    match: /^\/dashboard$/,
+    title: "Dashboard",
+    subtitle: "Live overview of monitor health, incidents, and endpoint activity.",
+  },
+  {
+    match: /^\/dashboard\/apis/,
+    title: "Monitors",
+    subtitle: "Manage monitor lifecycle, filters, and quick actions.",
+  },
+  {
+    match: /^\/dashboard\/add-api$/,
+    title: "Create Monitor",
+    subtitle: "Add a new monitor using the current backend payload.",
+  },
+  {
+    match: /^\/dashboard\/api\/\d+/,
+    title: "Monitor Detail",
+    subtitle: "Inspect configuration, analytics, logs, and edit controls.",
+  },
+  {
+    match: /^\/dashboard\/subscription$/,
+    title: "Subscription",
+    subtitle: "Plans, billing history, usage, settings, and lifecycle actions.",
+  },
+  {
+    match: /^\/dashboard\/account$/,
+    title: "Account",
+    subtitle: "Profile, current subscription summary, and account controls.",
+  },
+];
 
 export default function Navbar() {
   const pathname = usePathname();
-  const { title, sub } = getPageMeta(pathname);
+  const pageMeta = PAGE_META.find((item) => item.match.test(pathname)) || PAGE_META[0];
 
   return (
-    <>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&display=swap');
-
-        .navbar {
-          /*
-           * KEY: position sticky, NOT fixed.
-           * Sticky = part of document flow, sticks to top of scroll container.
-           * Fixed = floats over everything → causes overlap.
-           */
-          position: sticky;
-          top: 0;
-          width: 100%;
-          height: 56px;
-          background: rgba(10, 12, 18, 0.94);
-          backdrop-filter: blur(18px);
-          -webkit-backdrop-filter: blur(18px);
-          border-bottom: 1px solid rgba(255,255,255,0.055);
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          padding: 0 28px;
-          z-index: 40;
-          font-family: 'DM Sans', sans-serif;
-          flex-shrink: 0;
-        }
-
-        .nav-left {}
-        .nav-title {
-          font-size: 15px; font-weight: 500;
-          color: #d0d4f0;
-          line-height: 1.2;
-          letter-spacing: -0.01em;
-        }
-        .nav-sub {
-          font-size: 11px; font-weight: 300;
-          color: #363a58;
-          margin-top: 1px;
-        }
-
-        .nav-right {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-        }
-
-        .status-pill {
-          display: flex; align-items: center; gap: 6px;
-          background: rgba(29,158,117,0.1);
-          border: 1px solid rgba(29,158,117,0.2);
-          border-radius: 100px;
-          padding: 4px 12px 4px 8px;
-        }
-        .sp-dot {
-          width: 6px; height: 6px;
-          background: #1d9e75; border-radius: 50%;
-          box-shadow: 0 0 6px #1d9e75;
-          animation: sppulse 2.5s ease-in-out infinite;
-        }
-        @keyframes sppulse {
-          0%,100% { box-shadow: 0 0 5px #1d9e75; opacity: 1; }
-          50% { box-shadow: 0 0 10px #1d9e75; opacity: 0.65; }
-        }
-        .sp-text {
-          font-size: 11px; font-weight: 500;
-          color: #3dcaa0; letter-spacing: 0.02em;
-        }
-
-        .nav-sep {
-          width: 1px; height: 18px;
-          background: rgba(255,255,255,0.07);
-        }
-
-        .nav-logout {
-          display: flex; align-items: center; gap: 7px;
-          background: rgba(226,75,74,0.1);
-          border: 1px solid rgba(226,75,74,0.2);
-          border-radius: 9px;
-          padding: 6px 14px;
-          color: #e87878;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 12px; font-weight: 500;
-          cursor: pointer;
-          transition: background 0.18s, border-color 0.18s, color 0.18s;
-        }
-        .nav-logout:hover {
-          background: rgba(226,75,74,0.18);
-          border-color: rgba(226,75,74,0.38);
-          color: #f09595;
-        }
-      `}</style>
-
-      <header className="navbar">
-        <div className="nav-left">
-          <div className="nav-title">{title}</div>
-          {sub && <div className="nav-sub">{sub}</div>}
-        </div>
-
-        <div className="nav-right">
-          <div className="status-pill">
-            <div className="sp-dot" />
-            <span className="sp-text">All systems operational</span>
-          </div>
-          <div className="nav-sep" />
-          <button className="nav-logout" onClick={logout}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-              <polyline points="16 17 21 12 16 7"/>
-              <line x1="21" y1="12" x2="9" y2="12"/>
-            </svg>
-            Logout
-          </button>
-        </div>
-      </header>
-    </>
+    <header
+      style={{
+        position: "sticky",
+        top: 0,
+        zIndex: 30,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 16,
+        padding: "16px 28px",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+        background: "rgba(10,12,18,0.92)",
+        backdropFilter: "blur(18px)",
+      }}
+    >
+      <div>
+        <div style={{ color: "#eef0ff", fontSize: 16, fontWeight: 700 }}>{pageMeta.title}</div>
+        <div style={{ color: "#7d84a4", fontSize: 12, marginTop: 4 }}>{pageMeta.subtitle}</div>
+      </div>
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 8,
+          padding: "7px 12px",
+          borderRadius: 999,
+          border: "1px solid rgba(29,158,117,0.22)",
+          background: "rgba(29,158,117,0.1)",
+          color: "#67d9b4",
+          fontSize: 12,
+          fontWeight: 700,
+        }}
+      >
+        <span
+          style={{
+            width: 6,
+            height: 6,
+            borderRadius: "50%",
+            background: "#1d9e75",
+            boxShadow: "0 0 8px #1d9e75",
+          }}
+        />
+        App connected
+      </div>
+    </header>
   );
 }

@@ -1,4 +1,6 @@
-export default function Table({ apis }: any) {
+import type { MyApi } from "@/types";
+
+export default function Table({ apis }: { apis: MyApi[] }) {
   return (
     <table className="w-full bg-white shadow rounded">
       <thead>
@@ -10,7 +12,7 @@ export default function Table({ apis }: any) {
       </thead>
 
       <tbody>
-        {apis.map((api: any) => (
+        {apis.map((api) => (
           <tr key={api.id} className="text-center border-t">
             <td>{api.name}</td>
             <td>{api.url}</td>

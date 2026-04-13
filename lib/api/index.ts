@@ -3,3 +3,5 @@ export * as authAPI from "./auth";
 export * as monitorAPI from "./monitor";
 export * as userAPI from "./user";
 export * as analyticsAPI from "./analytics";
+export * as dashboardAPI from "./dashboard";
+export * as subscriptionAPI from "./subscription";
