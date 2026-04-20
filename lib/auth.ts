@@ -1,6 +1,8 @@
 import type { AuthResponse, AuthUser, StoredAuthSession } from "@/types";
 
 const AUTH_STORAGE_KEY = "api-monitor-auth";
+const ACCESS_TOKEN_TTL_MINUTES = 300;
+const ACCESS_TOKEN_TTL_MS = ACCESS_TOKEN_TTL_MINUTES * 60 * 1000;
 const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") || "http://localhost:8000";
 
@@ -23,10 +25,35 @@ export function getStoredSession(): StoredAuthSession | null {
       return null;
     }
 
-    return JSON.parse(raw) as StoredAuthSession;
+    const session = JSON.parse(raw) as StoredAuthSession;
+
+    if (!session.token) {
+      clearAuthSession();
+      return null;
+    }
+
+    if (!session.expires_at) {
+      const migratedSession = withSessionExpiry(session);
+      window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(migratedSession));
+      return migratedSession;
+    }
+
+    if (Date.now() >= session.expires_at) {
+      clearAuthSession();
+      return null;
+    }
+
+    return session;
   } catch {
     return null;
   }
+}
+
+function withSessionExpiry(session: StoredAuthSession) {
+  return {
+    ...session,
+    expires_at: session.expires_at ?? Date.now() + ACCESS_TOKEN_TTL_MS,
+  };
 }
 
 export function setAuthSession(payload: AuthResponse | StoredAuthSession) {
@@ -42,7 +69,7 @@ export function setAuthSession(payload: AuthResponse | StoredAuthSession) {
         }
       : payload;
 
-  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(withSessionExpiry(session)));
 }
 
 export function updateStoredUser(user: AuthUser | null) {
@@ -54,6 +81,7 @@ export function updateStoredUser(user: AuthUser | null) {
   setAuthSession({
     token: current.token,
     user,
+    expires_at: current.expires_at,
   });
 }
 

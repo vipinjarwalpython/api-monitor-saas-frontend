@@ -402,4 +402,5 @@ export interface PublicStatusResponse {
 export interface StoredAuthSession {
   token: string;
   user: AuthUser | null;
+  expires_at?: number;
 }
