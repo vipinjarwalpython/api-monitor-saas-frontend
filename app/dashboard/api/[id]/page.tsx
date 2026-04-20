@@ -180,9 +180,12 @@ export default function ApiDetailsPage() {
                 submitLabel="Update monitor"
                 onSubmit={async (payload) => {
                   try {
-                    await monitorAPI.updateMonitor(monitor.id, payload);
+                    const updatedMonitor = await monitorAPI.updateMonitor(monitor.id, payload);
+                    setMonitor({
+                      ...updatedMonitor,
+                      alert_threshold: payload.alert_threshold ?? updatedMonitor.alert_threshold,
+                    });
                     setNotice(`Updated "${monitor.name}".`);
-                    await loadMonitor();
                     selectTab("overview");
                   } catch (updateError) {
                     const message = extractApiError(updateError, "Unable to update this monitor.");
@@ -212,6 +215,7 @@ function OverviewTab({ monitor }: { monitor: Monitor }) {
         <OverviewMetric label="Method" value={monitor.method} />
         <OverviewMetric label="Check interval" value={`${monitor.check_interval}s`} />
         <OverviewMetric label="Timeout" value={`${monitor.timeout}s`} />
+        <OverviewMetric label="Alert threshold" value={String(monitor.alert_threshold)} />
         <OverviewMetric label="Expected codes" value={monitor.expected_status_codes} />
         <OverviewMetric label="Tags" value={csvFromUnknown(monitor.tags) || "No tags"} />
       </Card>
@@ -219,7 +223,7 @@ function OverviewTab({ monitor }: { monitor: Monitor }) {
       <Card title="Health summary" subtitle="Quick status and lifecycle details for this monitor.">
         <OverviewMetric label="Failure count" value={String(monitor.failure_count)} />
         <OverviewMetric label="Last response time" value={formatResponseTimeSeconds(monitor.last_response_time)} />
-        <OverviewMetric label="Last checked" value={formatRelativeTime(monitor.last_checked)} />
+        <OverviewMetric label="Last checked" value={formatRelativeTime(monitor.last_checked_at ?? monitor.last_checked)} />
         <OverviewMetric label="Created" value={formatDateTime(monitor.created_at)} />
         <OverviewMetric label="Updated" value={formatDateTime(monitor.updated_at)} />
       </Card>

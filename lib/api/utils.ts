@@ -63,6 +63,7 @@ export function extractApiError(error: unknown, fallback = "Something went wrong
 
 export function normalizeMonitorPayload(payload: Partial<MonitorPayload>) {
   const nextPayload = { ...payload } as Record<string, unknown>;
+  delete nextPayload.retry_count;
 
   if (Array.isArray(payload.expected_status_codes)) {
     nextPayload.expected_status_codes = payload.expected_status_codes.join(",");

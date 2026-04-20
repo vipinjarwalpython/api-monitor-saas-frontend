@@ -62,7 +62,6 @@ export interface MonitorPayload {
   body?: string | null;
   expected_status_codes?: string | number[];
   timeout?: number;
-  retry_count?: number;
   alert_threshold?: number;
   is_paused?: boolean;
   notification_channels?: string;
@@ -89,6 +88,7 @@ export interface Monitor {
   last_response_time?: number | null;
   last_status_code?: number | null;
   last_checked?: string | null;
+  last_checked_at?: string | null;
   tags?: string | null;
   created_at: string;
   updated_at: string;

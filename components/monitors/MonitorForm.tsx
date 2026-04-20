@@ -29,10 +29,8 @@ export function MonitorForm({
   const [method, setMethod] = useState(initialValues?.method ?? "GET");
   const [checkInterval, setCheckInterval] = useState(String(initialValues?.check_interval ?? 60));
   const [timeout, setTimeoutValue] = useState(String(initialValues?.timeout ?? 10));
-  const [retryCount, setRetryCount] = useState(String(initialValues?.retry_count ?? 0));
-  const [alertThreshold, setAlertThreshold] = useState(
-    String(initialValues?.alert_threshold ?? 5)
-  );
+  const initialAlertThreshold = String(initialValues?.alert_threshold ?? 5);
+  const [alertThreshold, setAlertThreshold] = useState(initialAlertThreshold);
   const [expectedStatusCodes, setExpectedStatusCodes] = useState(
     initialValues?.expected_status_codes
       ? String(initialValues.expected_status_codes)
@@ -69,8 +67,7 @@ export function MonitorForm({
       const parsedUrl = new URL(url);
       const interval = Number.parseInt(checkInterval, 10);
       const timeoutNumber = Number.parseFloat(timeout);
-      const retries = Number.parseInt(retryCount, 10);
-      const threshold = Number.parseInt(alertThreshold, 10);
+      const threshold = Number(alertThreshold);
       const statusCodes = parseStatusCodes(expectedStatusCodes);
       const headers = headersText.trim() ? parseHeadersInput(headersText) : null;
 
@@ -86,12 +83,8 @@ export function MonitorForm({
         throw new Error("Timeout must be greater than 0 seconds.");
       }
 
-      if (!Number.isFinite(retries) || retries < 0) {
-        throw new Error("Retry count cannot be negative.");
-      }
-
-      if (!Number.isFinite(threshold) || threshold < 1) {
-        throw new Error("Alert threshold must be at least 1.");
+      if (!Number.isInteger(threshold) || threshold < 1) {
+        throw new Error("Retry count and alert threshold must be at least 1.");
       }
 
       if (statusCodes.length === 0) {
@@ -105,7 +98,6 @@ export function MonitorForm({
         method,
         check_interval: interval,
         timeout: timeoutNumber,
-        retry_count: retries,
         alert_threshold: threshold,
         expected_status_codes: statusCodes,
         headers,
@@ -164,10 +156,10 @@ export function MonitorForm({
           <Input value={timeout} onChange={setTimeoutValue} type="number" min={1} step="0.5" />
         </Field>
         <Field label="Retry count">
-          <Input value={retryCount} onChange={setRetryCount} type="number" min={0} max={3} />
+          <Input value={alertThreshold} onChange={handleAlertThresholdChange} type="number" min={1} step={1} />
         </Field>
         <Field label="Alert threshold">
-          <Input value={alertThreshold} onChange={setAlertThreshold} type="number" min={1} />
+          <Input value={alertThreshold} onChange={handleAlertThresholdChange} type="number" min={1} step={1} />
         </Field>
       </div>
 
@@ -252,6 +244,10 @@ export function MonitorForm({
       </button>
     </form>
   );
+
+  function handleAlertThresholdChange(value: string) {
+    setAlertThreshold(value);
+  }
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
