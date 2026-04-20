@@ -4,12 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { analyticsAPI, monitorAPI } from "@/lib/api";
 import type { AnalyticsMonitorStats, MonitorStats } from "@/types";
-import { Card, LoadingBlock, Notice, StatCard, StatGrid } from "@/components/dashboard/ui";
+import { Card, LoadingBlock, Notice, StatCard, StatGrid, ThemedSelect } from "@/components/dashboard/ui";
 import { ResponseTimeChart, SuccessFailureChart } from "@/components/dashboard/charts";
 import { formatResponseTimeSeconds } from "@/lib/format";
 import { extractApiError } from "@/lib/api/utils";
 
 const HOUR_PRESETS = [24, 72, 168, 720];
+const HOUR_OPTIONS = HOUR_PRESETS.map((value) => ({
+  value: String(value),
+  label: `Last ${value}h`,
+}));
 
 export default function StatsTab() {
   const params = useParams();
@@ -59,17 +63,13 @@ export default function StatsTab() {
         title="Time window"
         subtitle="The analytics endpoint supports hour-based lookbacks for focused troubleshooting."
         action={
-          <select
-            value={hours}
-            onChange={(event) => setHours(Number(event.target.value))}
-            style={inputStyle}
-          >
-            {HOUR_PRESETS.map((value) => (
-              <option key={value} value={value}>
-                Last {value}h
-              </option>
-            ))}
-          </select>
+          <ThemedSelect
+            value={String(hours)}
+            options={HOUR_OPTIONS}
+            onChange={(value) => setHours(Number(value))}
+            ariaLabel="Stats time window"
+            style={{ width: 160 }}
+          />
         }
       >
         <StatGrid>
@@ -109,12 +109,3 @@ export default function StatsTab() {
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#eef0ff",
-  padding: "10px 12px",
-  fontSize: 13,
-};

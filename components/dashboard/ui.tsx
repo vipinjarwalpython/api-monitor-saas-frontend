@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { statusTone } from "@/lib/format";
 
@@ -381,6 +382,160 @@ export function Tabs({
           {tab.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+export function ThemedSelect({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  disabled,
+  style,
+}: {
+  value: string;
+  options: Array<{ value: string; label: string; disabled?: boolean }>;
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+  disabled?: boolean;
+  style?: CSSProperties;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hoveredValue, setHoveredValue] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [open]);
+
+  return (
+    <div
+      ref={rootRef}
+      style={{
+        position: "relative",
+        minWidth: 160,
+        width: "100%",
+        ...style,
+      }}
+    >
+      <button
+        type="button"
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        disabled={disabled}
+        onClick={() => setOpen((current) => !current)}
+        style={{
+          width: "100%",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: 12,
+          borderRadius: 12,
+          border: open ? "1px solid rgba(123,156,245,0.45)" : "1px solid rgba(255,255,255,0.08)",
+          background: "#151922",
+          color: "#eef0ff",
+          padding: "11px 12px",
+          fontSize: 14,
+          fontWeight: 600,
+          lineHeight: 1.2,
+          boxShadow: open ? "0 0 0 3px rgba(79,110,247,0.16)" : "none",
+          cursor: disabled ? "not-allowed" : "pointer",
+          opacity: disabled ? 0.65 : 1,
+        }}
+      >
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          {selected?.label ?? "Select"}
+        </span>
+        <span style={{ color: "#7d84a4", fontSize: 11 }}>{open ? "^" : "v"}</span>
+      </button>
+
+      {open ? (
+        <div
+          role="listbox"
+          style={{
+            position: "absolute",
+            zIndex: 50,
+            top: "calc(100% + 6px)",
+            left: 0,
+            right: 0,
+            maxHeight: 260,
+            overflowY: "auto",
+            padding: 4,
+            borderRadius: 12,
+            border: "1px solid rgba(123,156,245,0.22)",
+            background: "#10141d",
+            boxShadow: "0 18px 50px rgba(0,0,0,0.45)",
+          }}
+        >
+          {options.map((option) => {
+            const selectedOption = option.value === value;
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                role="option"
+                aria-selected={selectedOption}
+                disabled={option.disabled}
+                onClick={() => {
+                  if (option.disabled) {
+                    return;
+                  }
+
+                  onChange(option.value);
+                  setHoveredValue(null);
+                  setOpen(false);
+                }}
+                onMouseEnter={() => setHoveredValue(option.value)}
+                onMouseLeave={() => setHoveredValue(null)}
+                style={{
+                  width: "100%",
+                  border: "none",
+                  borderRadius: 9,
+                  background: selectedOption
+                    ? "#294f9f"
+                    : hoveredValue === option.value
+                      ? "rgba(123,156,245,0.16)"
+                      : "transparent",
+                  color: option.disabled ? "#6f7693" : "#eef0ff",
+                  padding: "10px 11px",
+                  textAlign: "left",
+                  fontSize: 13,
+                  fontWeight: 600,
+                  cursor: option.disabled ? "not-allowed" : "pointer",
+                }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

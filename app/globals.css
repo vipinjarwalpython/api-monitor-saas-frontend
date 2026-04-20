@@ -24,3 +24,30 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), sans-serif;
 }
+
+select {
+  color-scheme: dark;
+  background-color: #151922;
+  color: #eef0ff;
+}
+
+select:focus {
+  border-color: rgba(123, 156, 245, 0.45);
+  box-shadow: 0 0 0 3px rgba(79, 110, 247, 0.16);
+  outline: none;
+}
+
+select option,
+select optgroup {
+  background-color: #151922;
+  color: #eef0ff;
+}
+
+select option:checked {
+  background-color: #294f9f;
+  color: #ffffff;
+}
+
+select option:disabled {
+  color: #6f7693;
+}

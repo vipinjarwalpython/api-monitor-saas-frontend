@@ -100,7 +100,9 @@ export interface MonitorListItem {
   url: string;
   status: string;
   is_down: boolean;
+  is_paused?: boolean;
   last_checked?: string | null;
+  last_response_time?: number | null;
   failure_count: number;
 }
 
@@ -109,6 +111,9 @@ export interface MyApi {
   name?: string | null;
   url: string;
   status: string;
+  is_down?: boolean;
+  is_paused?: boolean;
+  failure_count?: number;
   last_checked_at?: string | null;
   response_time?: number | null;
 }

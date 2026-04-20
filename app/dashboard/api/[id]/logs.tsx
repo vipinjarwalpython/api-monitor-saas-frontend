@@ -4,9 +4,16 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { analyticsAPI } from "@/lib/api";
 import type { MonitorLog } from "@/types";
-import { Card, LoadingBlock, Notice, StatusPill } from "@/components/dashboard/ui";
+import { Card, LoadingBlock, Notice, StatusPill, ThemedSelect } from "@/components/dashboard/ui";
 import { formatDateTime, formatResponseTimeSeconds } from "@/lib/format";
 import { extractApiError } from "@/lib/api/utils";
+
+const HOUR_OPTIONS = [
+  { value: "24", label: "Last 24h" },
+  { value: "72", label: "Last 72h" },
+  { value: "168", label: "Last 7d" },
+  { value: "720", label: "Last 30d" },
+];
 
 export default function LogsTab() {
   const params = useParams();
@@ -52,16 +59,13 @@ export default function LogsTab() {
       title="Recent logs"
       subtitle="Every row comes from the analytics log endpoint with an hour-based filter."
       action={
-        <select
-          value={hours}
-          onChange={(event) => setHours(Number(event.target.value))}
-          style={inputStyle}
-        >
-          <option value={24}>Last 24h</option>
-          <option value={72}>Last 72h</option>
-          <option value={168}>Last 7d</option>
-          <option value={720}>Last 30d</option>
-        </select>
+        <ThemedSelect
+          value={String(hours)}
+          options={HOUR_OPTIONS}
+          onChange={(value) => setHours(Number(value))}
+          ariaLabel="Log time window"
+          style={{ width: 160 }}
+        />
       }
     >
       {logs.length === 0 ? (
@@ -125,12 +129,3 @@ function LogMetric({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
-const inputStyle: React.CSSProperties = {
-  borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#eef0ff",
-  padding: "10px 12px",
-  fontSize: 13,
-};

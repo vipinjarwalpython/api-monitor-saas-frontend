@@ -12,13 +12,30 @@ import {
   LoadingBlock,
   Notice,
   StatusPill,
+  ThemedSelect,
 } from "@/components/dashboard/ui";
 import { formatRelativeTime, formatResponseTimeSeconds } from "@/lib/format";
 import { extractApiError } from "@/lib/api/utils";
+import { getMonitorHealthState, type MonitorHealthState } from "@/lib/monitor-health";
 
 interface MonitorRow extends MonitorListItem {
   response_time?: number | null;
+  last_checked_at?: string | null;
 }
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All monitors" },
+  { value: "healthy", label: "Healthy only" },
+  { value: "down", label: "Down only" },
+  { value: "paused", label: "Paused only" },
+];
+
+const SORT_OPTIONS = [
+  { value: "created_at", label: "Newest first" },
+  { value: "name", label: "Name" },
+  { value: "status", label: "Status" },
+  { value: "failure_count", label: "Failure count" },
+];
 
 export default function ApiListPage() {
   const router = useRouter();
@@ -27,7 +44,7 @@ export default function ApiListPage() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | "healthy" | "down">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | MonitorHealthState>("all");
   const [sortBy, setSortBy] = useState<"created_at" | "name" | "status" | "failure_count">("created_at");
 
   const loadMonitors = useCallback(async () => {
@@ -40,18 +57,36 @@ export default function ApiListPage() {
           limit: 100,
           sort_by: sortBy,
           sort_order: sortBy === "name" ? "asc" : "desc",
-          is_down: statusFilter === "all" ? undefined : statusFilter === "down",
         }),
         monitorAPI.getMyAPIs(),
       ]);
 
       const byId = new Map<number, MyApi>(myApisResponse.map((item) => [item.id, item]));
+      const details = await Promise.all(listResponse.map((item) => monitorAPI.getMonitorDetails(item.id)));
+      const detailsById = new Map(details.map((item) => [item.id, item]));
+
+      const rows = listResponse.map((item) => {
+        const myApi = byId.get(item.id);
+        const details = detailsById.get(item.id);
+        const lastChecked = details?.last_checked ?? item.last_checked ?? myApi?.last_checked_at ?? null;
+
+        return {
+          ...item,
+          status: details?.status ?? item.status ?? myApi?.status,
+          is_down: details?.is_down ?? item.is_down ?? myApi?.is_down ?? false,
+          is_paused: details?.is_paused ?? item.is_paused ?? myApi?.is_paused ?? false,
+          failure_count: details?.failure_count ?? item.failure_count ?? myApi?.failure_count ?? 0,
+          last_checked: lastChecked,
+          last_checked_at: myApi?.last_checked_at ?? lastChecked,
+          last_response_time: details?.last_response_time ?? item.last_response_time ?? null,
+          response_time: myApi?.response_time ?? details?.last_response_time ?? item.last_response_time ?? null,
+        };
+      });
 
       setMonitors(
-        listResponse.map((item) => ({
-          ...item,
-          response_time: byId.get(item.id)?.response_time ?? null,
-        }))
+        statusFilter === "all"
+          ? rows
+          : rows.filter((item) => getMonitorHealthState(item) === statusFilter)
       );
     } catch (loadError) {
       setError(extractApiError(loadError, "Unable to load monitors."));
@@ -138,28 +173,21 @@ export default function ApiListPage() {
         >
           <label style={labelStyle}>
             <span>Status filter</span>
-            <select
+            <ThemedSelect
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-              style={inputStyle}
-            >
-              <option value="all">All monitors</option>
-              <option value="healthy">Healthy only</option>
-              <option value="down">Down only</option>
-            </select>
+              options={STATUS_OPTIONS}
+              onChange={(value) => setStatusFilter(value as typeof statusFilter)}
+              ariaLabel="Status filter"
+            />
           </label>
           <label style={labelStyle}>
             <span>Sort by</span>
-            <select
+            <ThemedSelect
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value as typeof sortBy)}
-              style={inputStyle}
-            >
-              <option value="created_at">Newest first</option>
-              <option value="name">Name</option>
-              <option value="status">Status</option>
-              <option value="failure_count">Failure count</option>
-            </select>
+              options={SORT_OPTIONS}
+              onChange={(value) => setSortBy(value as typeof sortBy)}
+              ariaLabel="Sort monitors"
+            />
           </label>
         </div>
       </Card>
@@ -202,7 +230,7 @@ export default function ApiListPage() {
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{item.name}</div>
                     <div style={{ color: "#7d84a4", fontSize: 12, marginTop: 6 }}>{item.url}</div>
                   </div>
-                  <StatusPill status={item.status} isDown={item.is_down} />
+                  <StatusPill status={item.status} isDown={item.is_down} paused={item.is_paused} />
                 </div>
 
                 <div
@@ -214,8 +242,8 @@ export default function ApiListPage() {
                     fontSize: 13,
                   }}
                 >
-                  <Metric label="Last check" value={formatRelativeTime(item.last_checked)} />
-                  <Metric label="Response time" value={formatResponseTimeSeconds(item.response_time)} />
+                  <Metric label="Last check" value={formatRelativeTime(item.last_checked_at ?? item.last_checked)} />
+                  <Metric label="Response time" value={formatResponseTimeSeconds(item.response_time ?? item.last_response_time)} />
                   <Metric label="Failures" value={String(item.failure_count)} />
                   <Metric label="Monitor ID" value={`#${item.id}`} />
                 </div>
@@ -235,7 +263,7 @@ export default function ApiListPage() {
                     disabled={busyId === item.id}
                     onClick={() => handlePauseResume(item)}
                   >
-                    {busyId === item.id ? "Updating..." : "Pause / resume"}
+                    {busyId === item.id ? "Updating..." : item.is_paused ? "Resume" : "Pause"}
                   </ActionButton>
                   <ActionButton
                     tone="danger"
@@ -275,11 +303,3 @@ const labelStyle: React.CSSProperties = {
   letterSpacing: "0.08em",
 };
 
-const inputStyle: React.CSSProperties = {
-  borderRadius: 12,
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "rgba(255,255,255,0.04)",
-  color: "#eef0ff",
-  padding: "11px 12px",
-  fontSize: 14,
-};

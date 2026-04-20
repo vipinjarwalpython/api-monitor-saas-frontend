@@ -3,9 +3,14 @@
 import { useState } from "react";
 import type { Monitor, MonitorPayload } from "@/types";
 import { csvFromUnknown, parseCommaList, parseHeadersInput, parseStatusCodes, prettyPrintHeaders } from "@/lib/format";
-import { Notice } from "@/components/dashboard/ui";
+import { Notice, ThemedSelect } from "@/components/dashboard/ui";
 
 type MonitorFormValues = Partial<MonitorPayload> & Partial<Monitor>;
+
+const METHOD_OPTIONS = ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"].map((method) => ({
+  value: method,
+  label: method,
+}));
 
 export function MonitorForm({
   mode,
@@ -130,17 +135,12 @@ export function MonitorForm({
           <Input value={name} onChange={setName} placeholder="Payments API" />
         </Field>
         <Field label="HTTP method">
-          <select
+          <ThemedSelect
             value={method}
-            onChange={(event) => setMethod(event.target.value)}
-            style={inputStyle}
-          >
-            {["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"].map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
+            options={METHOD_OPTIONS}
+            onChange={setMethod}
+            ariaLabel="HTTP method"
+          />
         </Field>
       </div>
 

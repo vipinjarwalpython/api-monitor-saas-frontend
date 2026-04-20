@@ -23,6 +23,7 @@ import {
   LoadingBlock,
   Notice,
   Tabs,
+  ThemedSelect,
 } from "@/components/dashboard/ui";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { extractApiError } from "@/lib/api/utils";
@@ -33,6 +34,11 @@ const TAB_OPTIONS = [
   { id: "usage", label: "Usage" },
   { id: "billing", label: "Billing" },
   { id: "settings", label: "Settings" },
+];
+
+const BILLING_CYCLE_OPTIONS = [
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly", label: "Yearly" },
 ];
 
 interface SubscriptionState {
@@ -526,16 +532,14 @@ export default function SubscriptionPage() {
                 <div style={{ display: "grid", gap: 16 }}>
                   <label style={labelStyle}>
                     <span>Billing cycle</span>
-                    <select
+                    <ThemedSelect
                       value={settingsDraft.billing_cycle}
-                      onChange={(event) =>
-                        setSettingsDraft((current) => ({ ...current, billing_cycle: event.target.value }))
+                      options={BILLING_CYCLE_OPTIONS}
+                      onChange={(value) =>
+                        setSettingsDraft((current) => ({ ...current, billing_cycle: value }))
                       }
-                      style={inputStyle}
-                    >
-                      <option value="monthly">Monthly</option>
-                      <option value="yearly">Yearly</option>
-                    </select>
+                      ariaLabel="Billing cycle"
+                    />
                   </label>
                   <label style={labelStyle}>
                     <span>Payment method</span>
