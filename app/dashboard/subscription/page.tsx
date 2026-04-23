@@ -175,6 +175,25 @@ export default function SubscriptionPage() {
     }
   }
 
+
+  // ✅ ADD HERE (INSIDE COMPONENT, BEFORE return)
+  const downloadInvoice = async (invoiceId: number) => {
+    try {
+      const blob = await subscriptionAPI.downloadInvoice(invoiceId);
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `invoice_${invoiceId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (error) {
+      console.error("Download error:", error);
+      alert("Failed to download invoice");
+    }
+  };
+
   return (
     <DashboardPage
       eyebrow="Subscription"
@@ -470,23 +489,56 @@ export default function SubscriptionPage() {
                   <div style={{ display: "grid", gap: 10 }}>
                     {state.invoices.invoices.map((invoice) => (
                       <div
-                        key={invoice.id}
+                      key={invoice.id}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                        gap: 12,
+                        borderRadius: 14,
+                        border: "1px solid rgba(255,255,255,0.06)",
+                        background: "rgba(255,255,255,0.02)",
+                        padding: 14,
+                        alignItems: "center"
+                      }}
+                    >
+                      <strong>{invoice.invoice_number}</strong>
+
+                      <span>{formatMoney(invoice.total, invoice.currency)}</span>
+
+                      <span>{invoice.status}</span>
+
+                      <span>{formatDateTime(invoice.invoice_date)}</span>
+
+                      <span>{invoice.payment_method || "No payment method"}</span>
+
+                      {/* ✅ DOWNLOAD BUTTON */}
+                      <button
+                        onClick={() => downloadInvoice(invoice.id)}
                         style={{
-                          display: "grid",
-                          gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-                          gap: 12,
-                          borderRadius: 14,
-                          border: "1px solid rgba(255,255,255,0.06)",
-                          background: "rgba(255,255,255,0.02)",
-                          padding: 14,
+                          padding: "8px 14px",
+                          borderRadius: "8px",
+                          background: "linear-gradient(135deg, #5b4af7, #7a6bff)",
+                          color: "#ffffff",
+                          border: "none",
+                          cursor: "pointer",
+                          fontSize: "13px",
+                          fontWeight: 600,
+                          transition: "all 0.2s ease",
+                          boxShadow: "0 4px 12px rgba(91, 74, 247, 0.3)"
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                          e.currentTarget.style.boxShadow = "0 6px 16px rgba(91, 74, 247, 0.4)";
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.transform = "translateY(0)";
+                          e.currentTarget.style.boxShadow = "0 4px 12px rgba(91, 74, 247, 0.3)";
                         }}
                       >
-                        <strong>{invoice.invoice_number}</strong>
-                        <span>{formatMoney(invoice.total, invoice.currency)}</span>
-                        <span>{invoice.status}</span>
-                        <span>{formatDateTime(invoice.invoice_date)}</span>
-                        <span>{invoice.payment_method || "No payment method"}</span>
-                      </div>
+                        Download PDF
+                      </button>
+
+                    </div>
                     ))}
                   </div>
                 ) : (

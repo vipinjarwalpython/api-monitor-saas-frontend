@@ -17,6 +17,7 @@ import type {
   UpgradeRequest,
   UsageResponse,
 } from "@/types";
+import axiosInstance from "../axios"; 
 
 const SUBSCRIPTION_ENDPOINTS = {
   PLANS: "/api/v2/subscription/plans",
@@ -141,3 +142,14 @@ export async function getPurchaseHistory() {
   );
   return response.data;
 }
+
+
+export const downloadInvoice = async (invoiceId: number) => {
+  const response = await axiosInstance.get(
+    `/api/v2/subscription/invoice/${invoiceId}/download`,
+    {
+      responseType: "blob",
+    }
+  );
+  return response.data;
+};
